@@ -5,6 +5,7 @@ import com.shivaansh.entity.Transaction;
 import com.shivaansh.service.TransactionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -23,16 +24,27 @@ public class TransactionController {
     private final TransactionService transactionService;
 
     @GetMapping
-    public ResponseEntity<?> getAllTransactions() {
+    public ResponseEntity<?> getAllTransactions(
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false) String category,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(required = false) String direction) {
         try {
-            log.info("GET /api/transactions");
+            log.info("GET /api/transactions - type={}, category={}, page={}, size={}, sortBy={}, direction={}",
+                    type, category, page, size, sortBy, direction);
 
-            List<Transaction> transactions = transactionService.getAllTransactions();
+            Page<Transaction> transactionPage =
+                    transactionService.getAllTransactions(type, category, page, size, sortBy, direction);
 
             Map<String, Object> response = new HashMap<>();
             response.put("status", "success");
-            response.put("count", transactions.size());
-            response.put("transactions", transactions);
+            response.put("page", transactionPage.getNumber());
+            response.put("size", transactionPage.getSize());
+            response.put("totalElements", transactionPage.getTotalElements());
+            response.put("totalPages", transactionPage.getTotalPages());
+            response.put("transactions", transactionPage.getContent());
 
             return ResponseEntity.ok(response);
         } catch (Exception e) {
@@ -40,6 +52,7 @@ public class TransactionController {
             return buildErrorResponse("Failed to fetch transactions", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+
 
     @GetMapping("/{id}")
     public ResponseEntity<?> getTransactionById(@PathVariable Long id) {
